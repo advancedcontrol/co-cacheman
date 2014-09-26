@@ -1,0 +1,9 @@
+{
+  "name": "co-cacheman",
+  "main": ["co-cacheman.js"],
+  "description": "A HTML5 manifest cache management system",
+  "dependencies": {
+    "angular": "1.x"
+  },
+  "devDependencies": {}
+}
