@@ -36,12 +36,12 @@
                         if (api.online) {
                             rawCache.update();
                         }
-
-                        // Check for an update ever 2min (with a 5 second variation)
-                        checkTimeout = $timeout(checkCache, 115000 + Math.floor((Math.random() * 5000) + 1));
                     } catch (e) {
                         noUpdate();
                         console.log('Warn: Cacheman loaded, however page has no cache');
+                    } finally {
+                        // Check for an update ever 2min (with a 5 second variation)
+                        checkTimeout = $timeout(checkCache, 115000 + Math.floor((Math.random() * 5000) + 1));
                     }
                 },
                 bindCache = function () {
