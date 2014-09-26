@@ -12,11 +12,10 @@
     module.
         factory('cacheman', [
             '$window',
-            '$document',
             '$timeout',
             '$q',
 
-        function ($window, $document, $timeout, $q) {
+        function ($window, $timeout, $q) {
             var firstCheck = true,
                 rawCache,           // The raw cache object
                 angCache,           // Angular element version of cache
@@ -32,6 +31,9 @@
                 },
                 checkCache = function () {
                     try {
+                        // Ensure we are up to date on this
+                        api.online = $window.navigator.onLine;
+
                         // Only update if we are online
                         if (api.online) {
                             rawCache.update();
@@ -94,15 +96,14 @@
 
             // Keep track of offline and online status
             api.online = $window.navigator.onLine;
-            $document.on('online', function () {
+            angular.element($window).on('online', function () {
                 api.online = true;
-            });
-            $document.on('offline', function () {
+            }).on('offline', function () {
                 api.online = false;
             });
 
             bindCache();
-            checkCache();
+            checkTimeout = $timeout(checkCache, 115000 + Math.floor((Math.random() * 5000) + 1));
 
             return api;
         }]).
