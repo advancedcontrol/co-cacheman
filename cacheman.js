@@ -92,9 +92,6 @@
                     updateReady: updateReady.promise,
                 };
 
-            bindCache();
-            checkCache();
-
             // Keep track of offline and online status
             api.online = $window.navigator.onLine;
             $document.on('online', function () {
@@ -103,6 +100,9 @@
             $document.on('offline', function () {
                 api.online = false;
             });
+
+            bindCache();
+            checkCache();
 
             return api;
         }]).
