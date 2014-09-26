@@ -21,9 +21,14 @@
                 angCache,           // Angular element version of cache
                 checkTimeout,
                 checkingDefer,
-                updateReady = $q.defer(),
+                readyCallback = $q.defer(),
+                scheduleCheck = function () {
+                    $timeout.cancel(checkTimeout);
+                    checkTimeout = $timeout(checkCache, 115000 + Math.floor((Math.random() * 5000) + 1));
+                },
                 noUpdate = function () {
                     firstCheck = false;
+                    api.error = false;
                     if (checkingDefer) {
                         checkingDefer.resolve('noupdate');
                         checkingDefer = null;
@@ -43,16 +48,38 @@
                         console.log('Warn: Cacheman loaded, however page has no cache');
                     } finally {
                         // Check for an update ever 2min (with a 5 second variation)
-                        checkTimeout = $timeout(checkCache, 115000 + Math.floor((Math.random() * 5000) + 1));
+                        scheduleCheck();
                     }
                 },
+                onError = function () {
+                    if (checkingDefer) {
+                        checkingDefer.reject('error');
+                        checkingDefer = null;
+                    }
+                    api.downloading = false;
+                    api.error = true;
+                    scheduleCheck();
+                },
+                onDownloading = function () {
+                    api.downloading = true;
+                },
+                onCached = function () {
+                    api.downloading = false;
+                },
                 bindCache = function () {
+                    api.error = false;
+                    api.downloading = false;
 
                     if (angCache) {
                         angCache.off('updateready', bindCache);
                         angCache.off('noupdate', noUpdate);
+                        angCache.off('error', onError);
+                        angCache.off('downloading', onDownloading);
+                        angCache.off('cached', onCached);
 
                         // This updates to the new cache
+                        // We unbind from the old cache to prevent mem leaks
+                        // They are separate objects
                         rawCache.swapCache();
 
                         // if this was our first check then we want to
@@ -70,7 +97,8 @@
                         }
 
                         // All other listeners
-                        updateReady.resolve(true);
+                        readyCallback.resolve(true);
+                        api.updateReady = true;
                     }
 
                     rawCache = $window.applicationCache;
@@ -78,6 +106,9 @@
 
                     angCache.on('updateready', bindCache);
                     angCache.on('noupdate', noUpdate);
+                    angCache.on('error', onError);
+                    angCache.on('downloading', onDownloading);
+                    angCache.on('cached', onCached);
                 },
                 api = {
                     checkNow: function () {
@@ -91,7 +122,8 @@
                     },
 
                     // Our callback system
-                    updateReady: updateReady.promise,
+                    readyCallback: readyCallback.promise,
+                    updateReady: false
                 };
 
             // Keep track of offline and online status
@@ -103,7 +135,7 @@
             });
 
             bindCache();
-            checkTimeout = $timeout(checkCache, 115000 + Math.floor((Math.random() * 5000) + 1));
+            scheduleCheck();
 
             return api;
         }]).
