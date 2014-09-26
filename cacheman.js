@@ -1,4 +1,4 @@
-(function(window, angular) {
+(function(angular) {
     'use strict';
 
     // Use existing module otherwise create a new one
@@ -11,10 +11,12 @@
     
     module.
         factory('cacheman', [
+            '$window',
+            '$document',
             '$timeout',
             '$q',
 
-        function ($timeout, $q) {
+        function ($window, $document, $timeout, $q) {
             var firstCheck = true,
                 rawCache,           // The raw cache object
                 angCache,           // Angular element version of cache
@@ -29,10 +31,18 @@
                     }
                 },
                 checkCache = function () {
-                    rawCache.update();
+                    try {
+                        // Only update if we are online
+                        if (api.online) {
+                            rawCache.update();
+                        }
 
-                    // Check for an update ever 2min (with a 5 second variation)
-                    checkTimeout = $timeout(checkCache, 115000 + Math.floor((Math.random() * 5000) + 1));
+                        // Check for an update ever 2min (with a 5 second variation)
+                        checkTimeout = $timeout(checkCache, 115000 + Math.floor((Math.random() * 5000) + 1));
+                    } catch (e) {
+                        noUpdate();
+                        console.log('Warn: Cacheman loaded, however page has no cache');
+                    }
                 },
                 bindCache = function () {
 
@@ -46,7 +56,7 @@
                         // if this was our first check then we want to
                         // reload as the cache might be really out of date
                         if (firstCheck) {
-                            window.location.reload();
+                            $window.location.reload();
                         }
 
                         // If we were defering this - i.e we want to know
@@ -61,33 +71,43 @@
                         updateReady.resolve(true);
                     }
 
-                    rawCache = window.applicationCache;
+                    rawCache = $window.applicationCache;
                     angCache = angular.element(rawCache);
 
                     angCache.on('updateready', bindCache);
                     angCache.on('noupdate', noUpdate);
+                },
+                api = {
+                    checkNow: function () {
+                        if (!checkingDefer) {
+                            checkingDefer = $q.defer();
+                            $timeout.cancel(checkTimeout);
+                            checkCache();
+                        }
+
+                        return checkingDefer.promise;
+                    },
+
+                    // Our callback system
+                    updateReady: updateReady.promise,
                 };
 
             bindCache();
             checkCache();
 
-            return {
-                checkNow: function () {
-                    if (!checkingDefer) {
-                        checkingDefer = $q.defer();
-                        $timeout.cancel(checkTimeout);
-                        checkCache();
-                    }
+            // Keep track of offline and online status
+            api.online = $window.navigator.onLine;
+            $document.on('online', function () {
+                api.online = true;
+            });
+            $document.on('offline', function () {
+                api.online = false;
+            });
 
-                    return checkingDefer.promise;
-                },
-
-                // Our callback system
-                updateReady: updateReady.promise
-            };
+            return api;
         }]).
 
         // Ensure this factory is initialized
         run(['cacheman', angular.noop]);
 
-})(this, this.angular);  // this === window unless in a webworker
+})(this.angular);  // this === window unless in a webworker
