@@ -138,7 +138,7 @@
                     checkNow: angular.noop,
                     readyCallback: $q.defer().promise,
                     updateReady: false
-                }
+                };
             }
             
             // Keep track of offline and online status
