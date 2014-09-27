@@ -109,8 +109,12 @@
                     angCache.on('error', onError);
                     angCache.on('downloading', onDownloading);
                     angCache.on('cached', onCached);
-                },
-                api = {
+                };
+                
+                
+            // Don't fail on IE9
+            if ($window.applicationCache) {
+                var api = {
                     checkNow: function () {
                         if (!checkingDefer) {
                             checkingDefer = $q.defer();
@@ -125,7 +129,18 @@
                     readyCallback: readyCallback.promise,
                     updateReady: false
                 };
-
+    
+                bindCache();
+                scheduleCheck();
+            } else {
+                // Provide a dummy object for browsers that don't support the standard
+                var api = {
+                    checkNow: angular.noop,
+                    readyCallback: $q.defer().promise,
+                    updateReady: false
+                }
+            }
+            
             // Keep track of offline and online status
             api.online = $window.navigator.onLine;
             angular.element($window).on('online', function () {
@@ -133,9 +148,6 @@
             }).on('offline', function () {
                 api.online = false;
             });
-
-            bindCache();
-            scheduleCheck();
 
             return api;
         }]).
